@@ -35,15 +35,28 @@ app.add_middleware(
 # Initialize SQLite database schema and seed default doctor/patients
 init_db()
 
-# Load PyTorch Model
-try:
-    MODEL = load_model()
-    GRAD_CAM = GradCAM(MODEL)
-    MODEL_ERROR: Optional[str] = None
-except Exception as exc:
-    MODEL = None
-    GRAD_CAM = None
-    MODEL_ERROR = str(exc)
+# Load PyTorch model lazily to reduce startup memory on constrained hosts.
+MODEL: Optional[object] = None
+GRAD_CAM = None
+MODEL_ERROR: Optional[str] = None
+
+
+def initialize_model() -> tuple[Optional[object], Optional[object]]:
+    global MODEL, GRAD_CAM, MODEL_ERROR
+
+    if MODEL is not None:
+        return MODEL, GRAD_CAM
+
+    try:
+        MODEL = load_model()
+        GRAD_CAM = GradCAM(MODEL)
+        MODEL_ERROR = None
+    except Exception as exc:
+        MODEL = None
+        GRAD_CAM = None
+        MODEL_ERROR = str(exc)
+
+    return MODEL, GRAD_CAM
 
 
 @app.get("/")
@@ -66,9 +79,13 @@ def root() -> dict:
 
 @app.get("/health")
 def health() -> dict:
+    current_model = MODEL
+    if current_model is None:
+        current_model, _ = initialize_model()
+
     return {
-        "status": "ok" if MODEL is not None else "error",
-        "model_loaded": MODEL is not None,
+        "status": "ok" if current_model is not None else "error",
+        "model_loaded": current_model is not None,
         "device": str(DEVICE),
         "threshold": DEFAULT_THRESHOLD,
         "error": MODEL_ERROR,
@@ -261,6 +278,14 @@ async def predict(
     db: Session = Depends(get_db),
     current_doctor: Doctor = Depends(get_current_doctor),
 ):
+    global MODEL, GRAD_CAM
+
+    if MODEL is None:
+        try:
+            MODEL, GRAD_CAM = initialize_model()
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            raise HTTPException(status_code=500, detail=f"PyTorch Model not loaded: {exc}") from exc
+
     if MODEL is None:
         raise HTTPException(status_code=500, detail=f"PyTorch Model not loaded: {MODEL_ERROR}")
 
