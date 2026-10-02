@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Activity, ShieldCheck, Stethoscope, Search, User, LogOut, CheckCircle2 } from "lucide-react";
 import { Badge } from "./ui/badge";
+import { apiUrl } from "@/lib/api";
 
 export function Header() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function Header() {
     }
 
     // Ping FastAPI health
-    fetch("http://127.0.0.1:8000/health")
+    fetch(apiUrl("/health"))
       .then((res) => res.json())
       .then((data) => setIsServerReady(data.status === "ok"))
       .catch(() => setIsServerReady(false));

@@ -13,6 +13,7 @@ import {
   Stethoscope,
   UserRound,
 } from "lucide-react";
+import { apiUrl } from "@/lib/api";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/auth/signup", {
+      const res = await fetch(apiUrl("/api/auth/signup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

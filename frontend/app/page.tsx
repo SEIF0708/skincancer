@@ -8,6 +8,7 @@ import { ColumnVisualizer } from "@/components/column-visualizer";
 import { ColumnAnalysis } from "@/components/column-analysis";
 import { PdfReportModal, SessionData } from "@/components/ui/pdf-report-modal";
 import { PatientEntryModal, PatientUploadData } from "@/components/patient-entry-modal";
+import { apiUrl } from "@/lib/api";
 
 const INITIAL_SESSIONS: SessionData[] = [
   {
@@ -86,7 +87,7 @@ export default function DashboardPage() {
     }
 
     // Fetch live sessions from FastAPI backend
-    fetch("http://127.0.0.1:8000/api/sessions")
+    fetch(apiUrl("/api/sessions"))
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch sessions");
         return res.json();
@@ -102,7 +103,7 @@ export default function DashboardPage() {
       });
 
     // Fetch existing patient records
-    fetch("http://127.0.0.1:8000/api/patients")
+    fetch(apiUrl("/api/patients"))
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -146,7 +147,7 @@ export default function DashboardPage() {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch("http://127.0.0.1:8000/api/predict", {
+      const res = await fetch(apiUrl("/api/predict"), {
         method: "POST",
         headers,
         body: formData,
